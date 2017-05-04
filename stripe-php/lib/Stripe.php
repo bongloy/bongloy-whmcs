@@ -8,7 +8,7 @@ class Stripe
     public static $apiKey;
 
     // @var string The base URL for the Stripe API.
-    public static $apiBase = 'https://api.stripe.com';
+    public static $apiBase = 'https://www.bongloy.com/api';
 
     // @var string The base URL for the Stripe API uploads endpoint.
     public static $apiUploadBase = 'https://uploads.stripe.com';
