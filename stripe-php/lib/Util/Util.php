@@ -2,10 +2,12 @@
 
 namespace Stripe\Util;
 
-use Stripe\Object;
+use Stripe\StripeObject;
 
 abstract class Util
 {
+    private static $isMbstringAvailable = null;
+
     /**
      * Whether the provided array (or other) is a list rather than a dictionary.
      *
@@ -41,7 +43,7 @@ abstract class Util
             if ($k[0] == '_') {
                 continue;
             }
-            if ($v instanceof Object) {
+            if ($v instanceof StripeObject) {
                 $results[$k] = $v->__toArray(true);
             } elseif (is_array($v)) {
                 $results[$k] = self::convertStripeObjectToArray($v);
@@ -57,16 +59,22 @@ abstract class Util
      *
      * @param array $resp The response from the Stripe API.
      * @param array $opts
-     * @return Object|array
+     * @return StripeObject|array
      */
     public static function convertToStripeObject($resp, $opts)
     {
         $types = array(
             'account' => 'Stripe\\Account',
+            'alipay_account' => 'Stripe\\AlipayAccount',
+            'apple_pay_domain' => 'Stripe\\ApplePayDomain',
+            'bank_account' => 'Stripe\\BankAccount',
+            'balance_transaction' => 'Stripe\\BalanceTransaction',
             'card' => 'Stripe\\Card',
             'charge' => 'Stripe\\Charge',
+            'country_spec' => 'Stripe\\CountrySpec',
             'coupon' => 'Stripe\\Coupon',
             'customer' => 'Stripe\\Customer',
+            'dispute' => 'Stripe\\Dispute',
             'list' => 'Stripe\\Collection',
             'invoice' => 'Stripe\\Invoice',
             'invoiceitem' => 'Stripe\\InvoiceItem',
@@ -74,10 +82,17 @@ abstract class Util
             'file' => 'Stripe\\FileUpload',
             'token' => 'Stripe\\Token',
             'transfer' => 'Stripe\\Transfer',
+            'order' => 'Stripe\\Order',
+            'order_return' => 'Stripe\\OrderReturn',
             'plan' => 'Stripe\\Plan',
+            'product' => 'Stripe\\Product',
             'recipient' => 'Stripe\\Recipient',
             'refund' => 'Stripe\\Refund',
+            'sku' => 'Stripe\\SKU',
+            'source' => 'Stripe\\Source',
             'subscription' => 'Stripe\\Subscription',
+            'subscription_item' => 'Stripe\\SubscriptionItem',
+            'three_d_secure' => 'Stripe\\ThreeDSecure',
             'fee_refund' => 'Stripe\\ApplicationFeeRefund',
             'bitcoin_receiver' => 'Stripe\\BitcoinReceiver',
             'bitcoin_transaction' => 'Stripe\\BitcoinTransaction',
@@ -92,11 +107,37 @@ abstract class Util
             if (isset($resp['object']) && is_string($resp['object']) && isset($types[$resp['object']])) {
                 $class = $types[$resp['object']];
             } else {
-                $class = 'Stripe\\Object';
+                $class = 'Stripe\\StripeObject';
             }
             return $class::constructFrom($resp, $opts);
         } else {
             return $resp;
+        }
+    }
+
+    /**
+     * @param string|mixed $value A string to UTF8-encode.
+     *
+     * @return string|mixed The UTF8-encoded string, or the object passed in if
+     *    it wasn't a string.
+     */
+    public static function utf8($value)
+    {
+        if (self::$isMbstringAvailable === null) {
+            self::$isMbstringAvailable = function_exists('mb_detect_encoding');
+
+            if (!self::$isMbstringAvailable) {
+                trigger_error("It looks like the mbstring extension is not enabled. " .
+                    "UTF-8 strings will not properly be encoded. Ask your system " .
+                    "administrator to enable the mbstring extension, or write to " .
+                    "support@stripe.com if you have any questions.", E_USER_WARNING);
+            }
+        }
+
+        if (is_string($value) && self::$isMbstringAvailable && mb_detect_encoding($value, "UTF-8", true) != "UTF-8") {
+            return utf8_encode($value);
+        } else {
+            return $value;
         }
     }
 }

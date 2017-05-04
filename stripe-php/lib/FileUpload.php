@@ -2,6 +2,18 @@
 
 namespace Stripe;
 
+/**
+ * Class FileUpload
+ *
+ * @property string $id
+ * @property string $object
+ * @property int $created
+ * @property string $purpose
+ * @property int $size
+ * @property string $type
+ *
+ * @package Stripe
+ */
 class FileUpload extends ApiResource
 {
     public static function baseUrl()
@@ -40,7 +52,7 @@ class FileUpload extends ApiResource
      * @param array|null $params
      * @param array|string|null $opts
      *
-     * @return FileUpload[]
+     * @return Collection of FileUploads
      */
     public static function all($params = null, $opts = null)
     {

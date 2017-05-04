@@ -31,6 +31,22 @@
                   
                 <div class="form-group">
                     <div class="col-sm-8 col-sm-offset-4">
+                         <style>
+  #apple-pay-button {
+    display: none;
+    background-color: black;
+    background-image: -webkit-named-image(apple-pay-logo-white);
+    background-size: 100% 100%;
+    background-origin: content-box;
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 44px;
+    padding: 10px 0;
+    border-radius: 10px;
+  }
+</style>
+
+<button id="apple-pay-button"></button>
                         <div class="radio">
                             <label>
                                 <input type="radio" name="ccinfo" value="new" onclick="showNewCardInputFields()"{if $ccinfo eq "new" || !$cardOnFile} checked{/if} /> {$LANG.creditcardenternewcard}</label>

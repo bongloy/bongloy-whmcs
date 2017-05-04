@@ -2,7 +2,12 @@
 
 namespace Stripe;
 
-class BitcoinReceiver extends ApiResource
+/**
+ * Class BitcoinReceiver
+ *
+ * @package Stripe
+ */
+class BitcoinReceiver extends ExternalAccount
 {
     /**
      * @return string The class URL for this resource. It needs to be special
@@ -19,25 +24,15 @@ class BitcoinReceiver extends ApiResource
      */
     public function instanceUrl()
     {
-        $id = $this['id'];
-        if (!$id) {
-            $class = get_class($this);
-            $msg = "Could not determine which URL to request: $class instance "
-             . "has invalid ID: $id";
-            throw new Error\InvalidRequest($msg, null);
-        }
-
-        $id = ApiRequestor::utf8($id);
-        $extn = urlencode($id);
-
-        if (!$this['customer']) {
+        $result = parent::instanceUrl();
+        if ($result) {
+            return $result;
+        } else {
+            $id = $this['id'];
+            $id = Util\Util::utf8($id);
+            $extn = urlencode($id);
             $base = BitcoinReceiver::classUrl();
             return "$base/$extn";
-        } else {
-            $base = Customer::classUrl();
-            $parent = ApiRequestor::utf8($this['customer']);
-            $parentExtn = urlencode($parent);
-            return "$base/$parentExtn/sources/$extn";
         }
     }
 
@@ -56,7 +51,7 @@ class BitcoinReceiver extends ApiResource
      * @param array|null $params
      * @param array|string|null $opts
      *
-     * @return BitcoinReceiver[].
+     * @return Collection of BitcoinReceivers
      */
     public static function all($params = null, $opts = null)
     {
@@ -76,22 +71,15 @@ class BitcoinReceiver extends ApiResource
 
     /**
      * @param array|null $params
-     * @param array|string|null $opts
+     * @param array|string|null $options
      *
-     * @return BitcoinReceiver The deleted Bitcoin Receiver item.
+     * @return BitcoinReceiver The refunded Bitcoin Receiver item.
      */
-    public function delete($params = null, $opts = null)
+    public function refund($params = null, $options = null)
     {
-        return $this->_delete($params, $opts);
-    }
-
-    /**
-     * @param array|string|null $opts
-     *
-     * @return BitcoinReceiver The saved Bitcoin Receiver item.
-     */
-    public function save($opts = null)
-    {
-        return $this->_save($opts);
+        $url = $this->instanceUrl() . '/refund';
+        list($response, $opts) = $this->_request('post', $url, $params, $options);
+        $this->refreshFrom($response, $opts);
+        return $this;
     }
 }

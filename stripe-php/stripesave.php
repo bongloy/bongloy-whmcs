@@ -1,4 +1,15 @@
 <?php
+use Illuminate\Database\Capsule\Manager as Capsule;
+
+/*
+  
+  Stripe WHMCS Payment Gateway 4.0.2 for WHMCS 7.x  
+
+  Copyright (c) 2016, Hosting Playground Inc
+  All rights reserved.
+*/	
+
+
 
 require("../../../init.php");
 require("../../../includes/functions.php");
@@ -9,21 +20,21 @@ require_once("init.php");
 
 if (isset($_SESSION['uid'])) {
    $whmcs_client_id = $_SESSION['uid'];
-   $result = select_query("tblclients","gatewayid,email", array("id" => $whmcs_client_id));
-   $customer_data = mysql_fetch_array($result);
-   $gateway_id = $customer_data['gatewayid'];
+   
+   
+   $client_data = \WHMCS\User\Client::find($whmcs_client_id);
+   $gateway_id = $client_data->gatewayid;
    $cchash = md5($cc_encryption_hash.$whmcs_client_id);
-   $email = $customer_data['email'];;
+   $email = $client_data->email;
    global $CONFIG;
    $systemurl = ($CONFIG['SystemSSLURL']) ? $CONFIG['SystemSSLURL'].'/' : $CONFIG['SystemURL'].'/';
-
-   $result = select_query("tblpaymentgateways","value", array("gateway" => "stripe","setting" => "secretKey"));
-   $gateway_data = mysql_fetch_array($result);
    
-   $country_code_check = get_query_val("tblpaymentgateways","value", array("gateway" => "stripe", "setting" => "countryCodeCheck"));
+   $secret_key = Capsule::table('tblpaymentgateways')->where('gateway','stripe')->where('setting','secretKey')->first()->value;
 
+   $country_code_check  = Capsule::table('tblpaymentgateways')->where('gateway','stripe')->where('setting','countryCodeCheck')->first()->value;
+   
    try {
-	   \Stripe\Stripe::setApiKey($gateway_data['value']);
+	   \Stripe\Stripe::setApiKey($secret_key);
 	   
 	   $create_new_customer = true;
 	   	   
@@ -45,28 +56,23 @@ if (isset($_SESSION['uid'])) {
 		   $stripe_customer =  \Stripe\Customer::create(array(
 	                           "email" => $email,
 	                           "card" => $_REQUEST['stripeToken']));
-	      
-	                        
-	       $client_record_query = select_query("tblclients","billingcid,country", array("id" =>$_SESSION['uid']));
-           $client_record = mysql_fetch_array($client_record_query);
-           $client_country = "";
-  
-         
-           if ($client_record["billingcid"] != 0 ) {
-             $billing_contact_query = select_query("tblcontacts","country", array("id" => $client_record["billingcid"]));
-             $billing_contact = mysql_fetch_array($billing_contact_query);
-             $client_country = $billing_contact["country"];  
+	       $client_country = "";
+           if ($client_data->billingContactId != 0 ) {
+             $client_country = \WHMCS\User\Client\Contact::find($client_data->billingContactId)->country;
            }
            else {
-            $client_country = $client_record["country"];
+             $client_country = $client_data->country;
            }
    
            $card = $stripe_customer->sources->retrieve($stripe_customer->default_source);
 	        
            if ($country_code_check != "on" || $client_country == $card->country ) {
   	         $exp_date = $_REQUEST['ccexpirymonth'].substr($_REQUEST['ccexpiryyear'],-2);
-	         full_query("UPDATE tblclients set expdate = AES_ENCRYPT('".$exp_date."','". $cchash. "') WHERE id = ". $whmcs_client_id);
-	         update_query("tblclients", array("cardtype" => $card->brand, "gatewayid" =>$stripe_customer->id,"cardlastfour" => $card->last4), array("id" => $whmcs_client_id));
+	         $client_data->cardtype = $card->brand;
+	         $client_data->gatewayid = $stripe_customer->id;
+	         $client_data->cardlastfour = $card->last4;
+	         $client_data->expdate = $client_data->generateCreditCardEncryptedField($exp_date);
+	         $client_data->save();
   	       }
 	       else {
 		     if (!isset($_POST['invoiceid'])) {
@@ -87,24 +93,22 @@ if (isset($_SESSION['uid'])) {
 	     $stripe_customer->save();
 	     
 	     $card = $stripe_customer->sources->retrieve($stripe_customer->default_source);
-	     
-	     $client_record_query = select_query("tblclients","billingcid,country", array("id" => $_SESSION['uid']));
-         $client_record = mysql_fetch_array($client_record_query);
+
          $client_country = "";
   
-         if ($client_record["billingcid"] != 0 ) {
-           $billing_contact_query = select_query("tblcontacts","country", array("id" => $client_record["billingcid"]));
-           $billing_contact = mysql_fetch_array($billing_contact_query);
-           $client_country = $billing_contact["country"];  
+         if ($client_data->billingContactId != 0 ) {
+           $client_country = \WHMCS\User\Client\Contact::find($client_data->billingContactId)->country;
          }
          else {
-          $client_country = $client_record["country"];
+             $client_country = $client_data->country;
          }
-         
          if ($country_code_check != "on" || $client_country == $card->country ) {
 	       $exp_date = $_REQUEST['ccexpirymonth'].substr($_REQUEST['ccexpiryyear'],-2);
-	       full_query("UPDATE tblclients set expdate = AES_ENCRYPT('".$exp_date."','". $cchash. "') WHERE id = ". $whmcs_client_id);
-	       update_query("tblclients", array("cardtype" => $card->brand, "gatewayid" =>$stripe_customer->id,"cardlastfour" => $card->last4), array("id" => $whmcs_client_id));
+	       $client_data->cardtype = $card->brand;
+	       $client_data->gatewayid = $stripe_customer->id;
+	       $client_data->cardlastfour = $card->last4;
+	       $client_data->expdate = $client_data->generateCreditCardEncryptedField($exp_date);
+	       $client_data->save();
 	     }
 	     else {
 		   if (!isset($_POST['invoiceid'])) {
@@ -127,15 +131,16 @@ if (isset($_SESSION['uid'])) {
    catch(Exception $e) {
        $body = $e->getJsonBody();
        $error_message = $body["error"]["message"];
-       $result = select_query("tblpaymentgateways","value", array("gateway" => "stripe","setting" => "name"));
-       $gateway_name = mysql_fetch_array($result);
+
+ 	   $gateway_name = Capsule::table('tblpaymentgateways')->where('gateway','stripe')->where('setting','name')->first()->value;
+
  	   if (!isset($_POST['invoiceid'])) {
-    	 logTransaction($gateway_name["value"],$error_message,"Error"); 
+    	 logTransaction($gateway_name,$error_message,"Error"); 
     	 $_SESSION['card_error'] = true;
          header( 'Location: '.$systemurl.'clientarea.php?action=creditcard&error=1');
        }
 	   else {
-		 logTransaction($gateway_name["value"],$error_message,"Error"); 
+		 logTransaction($gateway_name,$error_message,"Error"); 
 		 echo "error";
 	   }
    }

@@ -1,3 +1,5 @@
+                <div class="alert alert-danger payment-errors" style="display:none;"></div>
+                
                 <div id="creditCardInputFields"{if $selectedgatewaytype neq "CC"} class="hidden"{/if}>
                         <div class="row margin-bottom">
                             <div class="col-sm-12">
@@ -17,8 +19,7 @@
                             </div>
                         </div>
                     <div id="newCardInfo" class="row{if $clientsdetails.cclastfour && $ccinfo neq "new"} hidden{/if}">
-                        <div class="alert alert-danger payment-errors" style="display:none;"></div>
-                        
+                                                
                         <div class="col-sm-6">
                             <div class="form-group prepend-icon">
                                 <label for="inputCardNumber" class="field-icon">

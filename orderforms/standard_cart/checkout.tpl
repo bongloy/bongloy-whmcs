@@ -221,7 +221,7 @@
                                 {foreach $customfields as $customfield}
                                     <div class="col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">{$customfield.name}</label>
+                                            <label for="customfield{$customfield.id}">{$customfield.name}</label>
                                             {$customfield.input}
                                             {if $customfield.description}
                                                 <span class="field-help-text">
@@ -431,6 +431,24 @@
                     <p class="small text-muted">{$LANG.orderForm.preferredPaymentMethod}</p>
 
                     <div class="text-center">
+  <style>
+  #apple-pay-button {
+    display: none;
+    background-color: black;
+    background-image: -webkit-named-image(apple-pay-logo-white);
+    background-size: 100% 100%;
+    background-origin: content-box;
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 44px;
+    padding: 10px 0;
+    border-radius: 10px;
+  }
+</style>
+
+<button id="apple-pay-button"></button>
+
+<br>
                         {foreach key=num item=gateway from=$gateways}
                             <label class="radio-inline">
                                 <input type="radio" name="paymentmethod" value="{$gateway.sysname}" class="payment-methods{if $gateway.type eq "CC"} is-credit-card{/if}"{if $selectedgateway eq $gateway.sysname} checked{/if} />
@@ -440,10 +458,11 @@
                     </div>
                 </div>
 
+
+
                 <div class="clearfix"></div>
 
-                {include file="orderforms/ccforms/cardformstandardcart.tpl"}
-
+               {include file="orderforms/ccforms/cardformstandardcart.tpl"}
 
                 {if $shownotesfield}
 
@@ -480,10 +499,12 @@
                 </div>
             </form>
 
-            <div class="alert alert-warning checkout-security-msg">
-                <i class="fa fa-lock"></i>
-                {$LANG.ordersecure} (<strong>{$ipaddress}</strong>) {$LANG.ordersecure2}
-            </div>
+            {if $servedOverSsl}
+                <div class="alert alert-warning checkout-security-msg">
+                    <i class="fa fa-lock"></i>
+                    {$LANG.ordersecure} (<strong>{$ipaddress}</strong>) {$LANG.ordersecure2}
+                </div>
+            {/if}
 
         </div>
     </div>

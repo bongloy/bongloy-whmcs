@@ -1,9 +1,16 @@
 <?php
-/*
+use Illuminate\Database\Capsule\Manager as Capsule;
 
-Copyright (c) 2015, Hosting Playground Inc
-All rights reserved.
-*/
+
+/*
+  
+  Stripe WHMCS Payment Gateway 4.0.2 for WHMCS 7.x  
+
+  Copyright (c) 2016, Hosting Playground Inc
+  All rights reserved.
+*/	
+
+
 require_once(dirname(__FILE__) . "/stripe-php/init.php");
 
 function stripe_config() {
@@ -14,6 +21,10 @@ function stripe_config() {
      "stripeCurrency" =>  array("FriendlyName" => "Currency", "Type" => "text", "Size" => 40, "Default" => "usd"),
      "multiCurrency" => array("FriendlyName" => "Enable Multiple Currency Support", "Type" => "yesno","Description" => "When this option is enabled the users default currency from WHMCS will be passed to Stripe instead of the currency inputed above."), 
      "countryCodeCheck" => array("FriendlyName" => "Country Code Check", "Type" => "yesno","Description" => "Mark payments as failed if the country code of the card doesn't match the entered country code."), 
+      "statementDescriptor" => array("FriendlyName" => "Custom Statement Descriptor", "Type" => "text", "Size" => "40", "Description" => "Limited to 22 characters for the charge descriptor and must not use the greater than, less than, single quote or double-quote symbols (>, <, ‘, “)"), 
+      "addInvoiceNumberToDescriptor" => array("FriendlyName" => "Add the Invoice # to the Custom Statement Descriptor", "Type" => "yesno"), 
+      "applePay" => array("FriendlyName" => "Enable Apply Pay", "Type" => "yesno")
+
     );
 	return $configarray;
 }
@@ -24,23 +35,23 @@ function stripe_update_customer($params) {
    unset($_SESSION['stripeToken']);
    
    $whmcs_client_id = $params['clientdetails']['userid'];
-   $result = select_query("tblclients","gatewayid,email", array("id" => $whmcs_client_id));
-   $customer_data = mysql_fetch_array($result);
-   $gateway_id = $customer_data['gatewayid'];
+   
+   $client_data = \WHMCS\User\Client::find($whmcs_client_id);
+   
+   $gateway_id = $client_data->gatewayid;
    global $cc_encryption_hash;
    $cchash = md5($cc_encryption_hash.$whmcs_client_id);
-   $email = $customer_data['email'];
+   $email = $client_data->email;
    global $CONFIG;
    $systemurl = ($CONFIG['SystemSSLURL']) ? $CONFIG['SystemSSLURL'].'/' : $CONFIG['SystemURL'].'/';
 
-   $result = select_query("tblpaymentgateways","value", array("gateway" => "stripe","setting" => "secretKey"));
-   $gateway_data = mysql_fetch_array($result);
-   
-   $country_code_check = get_query_val("tblpaymentgateways","value", array("gateway" => "stripe", "setting" => "countryCodeCheck"));
+  
+   $secret_key = Capsule::table('tblpaymentgateways')->where('gateway','stripe')->where('setting','secretKey')->first()->value;
 
+   $country_code_check  = Capsule::table('tblpaymentgateways')->where('gateway','stripe')->where('setting','countryCodeCheck')->first()->value;
    
    try {
-	   \Stripe\Stripe::setApiKey($gateway_data['value']);
+	   \Stripe\Stripe::setApiKey($secret_key);
 	   $create_new_customer = true;
 	   
 	   if ($gateway_id != null && $gateway_id != '' && $gateway_id != 'stripejs') {
@@ -61,24 +72,22 @@ function stripe_update_customer($params) {
 	                           "email" => $email,
 	                           "card" => $stripe_token));
 	     $card = $stripe_customer->sources->retrieve($stripe_customer->default_source);                      
-         $client_record_query = select_query("tblclients","billingcid,country", array("id" => $_SESSION['uid']));
-         $client_record = mysql_fetch_array($client_record_query);
          $client_country = "";
-  
          
-         if ($client_record["billingcid"] != 0 ) {
-           $billing_contact_query = select_query("tblcontacts","country", array("id" => $client_record["billingcid"]));
-           $billing_contact = mysql_fetch_array($billing_contact_query);
-           $client_country = $billing_contact["country"];  
+         if ($client_data->billingContactId != 0 ) {
+           $client_country = \WHMCS\User\Client\Contact::find($client_data->billingContactId)->country;
          }
          else {
-           $client_country = $client_record["country"];
+           $client_country = $client_data->country;
          }
          
          if ($country_code_check != "on" || $client_country == $card->country ) {
            $exp_date = $_SESSION['stripe_ccexpirymonth'].substr($_SESSION['stripe_ccexpiryyear'],-2);
-	       full_query("UPDATE tblclients set expdate = AES_ENCRYPT('".$exp_date."','". $cchash. "') WHERE id = ". $whmcs_client_id);
-	       update_query("tblclients", array("cardtype" => $card->brand, "gatewayid" =>$stripe_customer->id,"cardlastfour" => $card->last4), array("id" => $whmcs_client_id));
+	       $client_data->cardtype = $card->brand;
+	       $client_data->gatewayid = $stripe_customer->id;
+	       $client_data->cardlastfour = $card->last4;
+	       $client_data->expdate = $client_data->generateCreditCardEncryptedField($exp_date);
+	       $client_data->save();
   	      }	                       
   	      else {
 	  	    return array("result" => false, "error" => "Country Code does not match billing address country, Customer ID: " . $_SESSION['uid']);  
@@ -91,24 +100,23 @@ function stripe_update_customer($params) {
 	     $stripe_customer->card = $stripe_token;
 	     $stripe_customer->save();
 	     $card = $stripe_customer->sources->retrieve($stripe_customer->default_source);
-	     $client_record_query = select_query("tblclients","billingcid,country", array("id" => $_SESSION['uid']));
-         $client_record = mysql_fetch_array($client_record_query);
-         $client_country = "";
+	     $client_country = "";
   
          
-         if ($client_record["billingcid"] != 0 ) {
-           $billing_contact_query = select_query("tblcontacts","country", array("id" => $client_record["billingcid"]));
-           $billing_contact = mysql_fetch_array($billing_contact_query);
-           $client_country = $billing_contact["country"];  
+         if ($client_data->billingContactId != 0 ) {
+           $client_country = \WHMCS\User\Client\Contact::find($client_data->billingContactId)->country;
          }
          else {
-           $client_country = $client_record["country"];
+           $client_country = $client_data->country;
          }
          
          if ($country_code_check != "on" || $client_country == $card->country ) {
            $exp_date = $_SESSION['stripe_ccexpirymonth'].substr($_SESSION['stripe_ccexpiryyear'],-2);
-	       full_query("UPDATE tblclients set expdate = AES_ENCRYPT('".$exp_date."','". $cchash. "') WHERE id = ". $whmcs_client_id);
-	       update_query("tblclients", array("cardtype" => $card->brand, "gatewayid" =>$stripe_customer->id,"cardlastfour" => $card->last4), array("id" => $whmcs_client_id));  	      }	                       
+	       $client_data->cardtype = $card->brand;
+	       $client_data->gatewayid = $stripe_customer->id;
+	       $client_data->cardlastfour = $card->last4;
+	       $client_data->expdate = $client_data->generateCreditCardEncryptedField($exp_date);
+	       $client_data->save();   }	                       
   	      else {
 	  	    return array("result" => false, "error" => "Country Code does not match billing address country, Customer ID: " . $_SESSION['uid']);  
   	      }  
@@ -156,12 +164,28 @@ function stripe_capture($params) {
       \Stripe\Stripe::setApiKey($params['secretKey']);
       if ($gatewayid != null && $gatewayid != '') {
 
-      	  $charge = \Stripe\Charge::create(array(
+          $new_charge = array(
 		    "amount" => $params['amount']*100,
 		    "currency" => $currency,
 		    "customer" => $gatewayid,
-		    "description" => "Payment of Invoice #" . $params['invoiceid'])
-		  );
+		    "description" => "Payment of Invoice #" . $params['invoiceid']);
+
+
+          if (!empty($params['statementDescriptor'])) {
+            if ($params['addInvoiceNumberToDescriptor'] == 'on') {
+              $statement_descriptor = $params['statementDescriptor'] . " #" . $params['invoiceid'];
+              if (strlen($statement_descriptor) > 22) {
+	            $remaining_chars = 22-strlen(" #" . $params['invoiceid']);
+	            $statement_descriptor = substr($statement_descriptor,0,$remaining_chars) . " #" . $params['invoiceid'];
+              }
+            }
+            else {
+	          $statement_descriptor = $params['statementDescriptor'];
+            }
+            $new_charge["statement_descriptor"] = $statement_descriptor;
+          }
+          
+      	  $charge = \Stripe\Charge::create($new_charge);
 		   
 		  if ($charge->paid == true) {
 		    $balance_transaction = \Stripe\BalanceTransaction::retrieve($charge->balance_transaction);
@@ -286,6 +310,7 @@ function stripe_refund($vars) {
 }
 
 function stripe_storeremote($params) {
+	
    if ($_SESSION['stripeToken']) {
       if ($params['gatewayid'] != "") {
         return array('status'=>'success', 'gatewayid'=> $params['gatewayid']);      

@@ -2,6 +2,20 @@
 
 namespace Stripe;
 
+/**
+ * Class TransferReversal
+ *
+ * @property string $id
+ * @property string $object
+ * @property int $amount
+ * @property string $balance_transaction
+ * @property int $created
+ * @property string $currency
+ * @property mixed $metadata
+ * @property string $transfer
+ *
+ * @package Stripe
+ */
 class TransferReversal extends ApiResource
 {
     /**
@@ -18,8 +32,8 @@ class TransferReversal extends ApiResource
                 null
             );
         }
-        $id = ApiRequestor::utf8($id);
-        $transfer = ApiRequestor::utf8($transfer);
+        $id = Util\Util::utf8($id);
+        $transfer = Util\Util::utf8($transfer);
 
         $base = Transfer::classUrl();
         $transferExtn = urlencode($transfer);
