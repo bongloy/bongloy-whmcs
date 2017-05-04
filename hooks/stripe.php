@@ -2,21 +2,21 @@
 use Illuminate\Database\Capsule\Manager as Capsule;
 
 
-/*  
- Stripe WHMCS Payment Gateway 4.0.2 for WHMCS 7.x  
+/*
+ Stripe WHMCS Payment Gateway 4.0.2 for WHMCS 7.x
 
   Copyright (c) 2016, Hosting Playground Inc
   All rights reserved.
-*/	
-	
+*/
+
 
 
 function serverping_save_stripe_token($vars) {
   $_SESSION['stripeToken'] = $vars['stripeToken'];
   $_SESSION['stripe_ccexpirymonth'] = $vars['ccexpirymonth'];
-  $_SESSION['stripe_ccexpiryyear'] = $vars['ccexpiryyear'];	
+  $_SESSION['stripe_ccexpiryyear'] = $vars['ccexpiryyear'];
   $_SESSION['stripe_card_country'] = $vars['card_country'];
-  $_SESSION['stripe_ccexpirydate'] = $_SESSION['stripe_ccexpirymonth'].substr($_SESSION['stripe_ccexpiryyear'],-2);  
+  $_SESSION['stripe_ccexpirydate'] = $_SESSION['stripe_ccexpirymonth'].substr($_SESSION['stripe_ccexpiryyear'],-2);
 }
 
 function serverping_stripe_cc_form($vars) {
@@ -29,21 +29,21 @@ function serverping_stripe_cc_form($vars) {
   $supported_carts_form_names["verticalsteps"] = 'cardformone.tpl';
   $supported_carts_form_names["web20cart"] = 'cardformtwo.tpl';
   $supported_carts_form_names["comparison"] = 'cardformthree.tpl';
-  
+
   $supported_carts_form_names["cloud_slider"] = 'cardformstandardcart.tpl';
   $supported_carts_form_names["premium_comparison"] = 'cardformstandardcart.tpl';
   $supported_carts_form_names["pure_comparison"] = 'cardformstandardcart.tpl';
   $supported_carts_form_names["standard_cart"] = 'cardformstandardcart.tpl';
   $supported_carts_form_names["thememetro-b-plus"] = 'cardformstandardcart.tpl';
- 
-  
+
+
   if (function_exists("stripe_custom_forms")) {
     $custom_forms = stripe_custom_forms($vars);
     $supported_carts_form_names = array_merge($supported_carts_form_names,$custom_forms["stripe_custom_cart_form_names"]);
   }
-  
+
   $cart = $vars['carttpl'];
-  
+
   if ($vars['filename'] == 'cart' && isset($supported_carts_form_names["$cart"])) {
     return array("cc_form_name" => $supported_carts_form_names["$cart"]);
   }
@@ -51,7 +51,7 @@ function serverping_stripe_cc_form($vars) {
 
 
 function serverping_stripe_error_saving_card($vars) {
-  if ($vars["clientareaaction"] == "creditcard") { 
+  if ($vars["clientareaaction"] == "creditcard") {
     if ($_SESSION['card_error']) {
 	    unset($_SESSION['card_error']);
 	    return array("card_error" => true);
@@ -64,28 +64,28 @@ function serverping_stripe_error_saving_card($vars) {
 
 function serverping_stripe_cart_checkout($vars) {
   global $whmcs;
-  
+
   $supported_carts = array("modern","slider","cart","verticalsteps","boxes","web20cart","comparison");
-  $standard_carts = array("cloud_slider","premium_comparison","pure_comparison","standard_cart","thememetro-b-plus"); 
-  
+  $standard_carts = array("cloud_slider","premium_comparison","pure_comparison","standard_cart","thememetro-b-plus");
+
   $publishableKey = Capsule::table('tblpaymentgateways')->where('gateway','stripe')->where('setting','publishableKey')->first()->value;
   $applePay = Capsule::table('tblpaymentgateways')->where('gateway','stripe')->where('setting','applePay')->first()->value;
-  
-        
+
+
   if (function_exists("stripe_custom_forms")) {
     $custom_forms = stripe_custom_forms($vars);
     $supported_carts = array_merge($supported_carts,$custom_forms["stripe_custom_carts"]);
   }
-  
+
   if ($vars['filename'] == 'cart' && (in_array($vars['carttpl'], $supported_carts)) ) {
-    
+
     if (isset($custom_forms["stripe_custom_carts_scripts"][$vars['carttpl']])) {
 	  $script = $custom_forms["stripe_custom_carts_scripts"][$vars['carttpl']];
     }
     else {
-    
-     
-      $script = '<script type="text/javascript" src="https://js.stripe.com/v2/"></script>
+
+
+      $script = '<script type="text/javascript" src="https://js.bongloy.com/assets/v2/bongloy.js"></script>
       <script type="text/javascript">
             Stripe.setPublishableKey(\''.  $publishableKey . '\');
             var $customer_name = \'' . addslashes($vars['clientsdetails']['firstname']). ' ' . addslashes($vars['clientsdetails']['lastname']) .'\';
@@ -97,7 +97,7 @@ function serverping_stripe_cart_checkout($vars) {
             var $state = \'' . addslashes($vars['clientsdetails']['state']). '\';
             var $continue_button = \''. $whmcs->get_lang('completeorder'). '\';
             var $wait_button = \''. $whmcs->get_lang('pleasewait'). '\';
-            
+
             function stripeResponseHandler(status, response) {
                 if (response.error) {
                     jQuery(\'.ordernow\').removeAttr("disabled");
@@ -109,9 +109,9 @@ function serverping_stripe_cart_checkout($vars) {
                     var token = response[\'id\'];
                     form$.append("<input type=\'hidden\' name=\'stripeToken\' value=\'" + token + "\' />");
                     form$.append("<input type=\'hidden\' name=\'ccnumber\' value=\'4242424242424242\' />");
-                    form$.append("<input type=\'hidden\' name=\'cccvv\' value=\'111\' />");     
-                    form$.append("<input type=\'hidden\' name=\'card_country\' value=\'" + response[\'card\'][\'country\'] +"\' />");     
-                    form$.attr(\'action\',form$.attr(\'action\')+ "&submit=true");      
+                    form$.append("<input type=\'hidden\' name=\'cccvv\' value=\'111\' />");
+                    form$.append("<input type=\'hidden\' name=\'card_country\' value=\'" + response[\'card\'][\'country\'] +"\' />");
+                    form$.attr(\'action\',form$.attr(\'action\')+ "&submit=true");
                     form$.get(0).submit();
                 }
             }
@@ -134,8 +134,8 @@ function serverping_stripe_cart_checkout($vars) {
                         $zip = jQuery(\'[name="postcode"]\').val();
                         $county = jQuery(\'#inputCountry\').val();
                       }
-                     
-                     
+
+
                       Stripe.createToken({
                         number: jQuery(\'.card-number\').val(),
                         cvc: jQuery(\'.card-cvc\').val(),
@@ -152,24 +152,24 @@ function serverping_stripe_cart_checkout($vars) {
                       return false;
                     }
                     else {
-	                  jQuery("#mainfrm").attr(\'action\',jQuery("#mainfrm").attr(\'action\')+ "&submit=true");   
+	                  jQuery("#mainfrm").attr(\'action\',jQuery("#mainfrm").attr(\'action\')+ "&submit=true");
                       return true;
                     }
                });
             });
         </script>';
-        
+
         }
         return $script;
   }
   if ($vars['filename'] == 'cart' && (in_array($vars['carttpl'], $standard_carts)) ) {
-    
+
     if (isset($custom_forms["stripe_custom_carts_scripts"][$vars['carttpl']])) {
 	  $script = $custom_forms["stripe_custom_carts_scripts"][$vars['carttpl']];
     }
     else {
-    
-      $script = '<script type="text/javascript" src="https://js.stripe.com/v2/"></script>
+
+      $script = '<script type="text/javascript" src="https://js.bongloy.com/assets/v2/bongloy.js"></script>
       <script type="text/javascript">
             Stripe.setPublishableKey(\''. $publishableKey . '\');
             var $customer_name = \'' . addslashes($vars['clientsdetails']['firstname']). ' ' . addslashes($vars['clientsdetails']['lastname']) .'\';
@@ -181,7 +181,7 @@ function serverping_stripe_cart_checkout($vars) {
             var $state = \'' . addslashes($vars['clientsdetails']['state']). '\';
             var $continue_button = \''. $whmcs->get_lang('completeorder'). '\';
             var $wait_button = \''. $whmcs->get_lang('pleasewait'). '\';
-            
+
             function stripeResponseHandler(status, response) {
                 if (response.error) {
                     jQuery(\'#btnCompleteOrder\').removeAttr("disabled");
@@ -193,9 +193,9 @@ function serverping_stripe_cart_checkout($vars) {
                     var token = response[\'id\'];
                     form$.append("<input type=\'hidden\' name=\'stripeToken\' value=\'" + token + "\' />");
                     form$.append("<input type=\'hidden\' name=\'ccnumber\' value=\'4242424242424242\' />");
-                    form$.append("<input type=\'hidden\' name=\'cccvv\' value=\'111\' />");     
-                    form$.append("<input type=\'hidden\' name=\'card_country\' value=\'" + response[\'card\'][\'country\'] +"\' />");     
-                    form$.attr(\'action\',form$.attr(\'action\')+ "&submit=true");      
+                    form$.append("<input type=\'hidden\' name=\'cccvv\' value=\'111\' />");
+                    form$.append("<input type=\'hidden\' name=\'card_country\' value=\'" + response[\'card\'][\'country\'] +"\' />");
+                    form$.attr(\'action\',form$.attr(\'action\')+ "&submit=true");
                     form$.get(0).submit();
                 }
             }
@@ -205,7 +205,7 @@ function serverping_stripe_cart_checkout($vars) {
 ';
 
 if ($applePay == "on") {
-	$script .= '             
+	$script .= '
 Stripe.applePay.checkAvailability(function(available) {
   if (available) {
     document.getElementById(\'apple-pay-button\').style.display = \'block\';
@@ -213,7 +213,7 @@ Stripe.applePay.checkAvailability(function(available) {
 });
 
 
-$("#apple-pay-button").click(function(e) { 
+$("#apple-pay-button").click(function(e) {
   e.preventDefault();
   beginApplePay();
 });
@@ -238,10 +238,10 @@ var session = Stripe.applePay.buildSession(paymentRequest,
       jQuery("input[name=ccinfo]").val("new");
       form$.append("<input type=\'hidden\' name=\'stripeToken\' value=\'" + token + "\' />");
       form$.append("<input type=\'hidden\' name=\'ccnumber\' value=\'4242424242424242\' />");
-      form$.append("<input type=\'hidden\' name=\'cccvv\' value=\'111\' />");     
-      form$.append("<input type=\'hidden\' name=\'card_country\' value=\'" + result.token.card.country +"\' />");     
-                  
-      form$.attr(\'action\',form$.attr(\'action\')+ "&submit=true");      
+      form$.append("<input type=\'hidden\' name=\'cccvv\' value=\'111\' />");
+      form$.append("<input type=\'hidden\' name=\'card_country\' value=\'" + result.token.card.country +"\' />");
+
+      form$.attr(\'action\',form$.attr(\'action\')+ "&submit=true");
       form$.get(0).submit();
   }, function(error) {
      jQuery(\'#btnCompleteOrder\').removeAttr("disabled");
@@ -250,8 +250,8 @@ var session = Stripe.applePay.buildSession(paymentRequest,
      jQuery(".payment-errors").show();
   });
 
-  session.begin();     
-  }         
+  session.begin();
+  }
   ';
  }
   $script .= '
@@ -272,21 +272,21 @@ var session = Stripe.applePay.buildSession(paymentRequest,
                         $zip = jQuery(\'[name="postcode"]\').val();
                         $county = jQuery(\'#inputCountry\').val();
                       }
-                      
-                      
+
+
                       $exp_month = "";
                       $exp_year = "";
 
                       if (jQuery("#inputCardExpiry").val().split("/")[0] != null) {
-	                    $exp_month = jQuery("#inputCardExpiry").val().split("/")[0].trim();    
-	                  }                     
+	                    $exp_month = jQuery("#inputCardExpiry").val().split("/")[0].trim();
+	                  }
                       if (jQuery("#inputCardExpiry").val().split("/")[1] != null) {
-	                    $exp_year = jQuery("#inputCardExpiry").val().split("/")[1].trim();    
-	                  }                     
-                     
-                      jQuery("#ccexpirymonth").val($exp_month);                     
+	                    $exp_year = jQuery("#inputCardExpiry").val().split("/")[1].trim();
+	                  }
+
+                      jQuery("#ccexpirymonth").val($exp_month);
                       jQuery("#ccexpiryyear").val($exp_year);
-                     
+
                       Stripe.createToken({
                         number: jQuery(\'.card-number\').val(),
                         cvc: jQuery(\'.card-cvc\').val(),
@@ -303,13 +303,13 @@ var session = Stripe.applePay.buildSession(paymentRequest,
                       return false;
                     }
                     else {
-	                  jQuery("#mainfrm").attr(\'action\',jQuery("#mainfrm").attr(\'action\')+ "&submit=true");   
+	                  jQuery("#mainfrm").attr(\'action\',jQuery("#mainfrm").attr(\'action\')+ "&submit=true");
                       return true;
                     }
                });
             });
         </script>';
-        
+
         }
         return $script;
   }
@@ -317,14 +317,14 @@ var session = Stripe.applePay.buildSession(paymentRequest,
        $balance = \WHMCS\Billing\Invoice::find($vars["invoiceid"])->total;
        $currency = Capsule::table('tblcurrencies')->find($vars["clientsdetails"]["currency"])->code;
        $script = '
-        <script type="text/javascript" src="https://js.stripe.com/v2/"></script>
+        <script type="text/javascript" src="https://js.bongloy.com/assets/v2/bongloy.js"></script>
         <script type="text/javascript">
             // this identifies your website in the createToken call below
             Stripe.setPublishableKey(\''. $publishableKey .'\');
             var $continue_button = \''. $whmcs->get_lang('ordercontinuebutton'). '\';
             var $wait_button = \''. $whmcs->get_lang('pleasewait'). '\';
-            
-            
+
+
               function stripeResponseHandler(status, response) {
                 if (response.error) {
                     // re-enable the submit button
@@ -341,7 +341,7 @@ var session = Stripe.applePay.buildSession(paymentRequest,
                     // insert the token into the form so it gets submitted to the server
                     form$.append("<input type=\'hidden\' name=\'stripeToken\' value=\'" + token + "\' />");
                     form$.append("<input type=\'hidden\' name=\'cccvv2\' value=\'123\'/>");
-                    
+
                     jQuery.post("modules/gateways/stripe-php/stripesave.php", jQuery("#payment-form").serialize(), function(data) {
                       if (data == "error") {
                          jQuery(\'.submit-button\').removeAttr("disabled");
@@ -349,24 +349,24 @@ var session = Stripe.applePay.buildSession(paymentRequest,
                          jQuery(\'#submit-button\').val($continue_button);
                          jQuery(".payment-errors").show();
                          jQuery(\'#cc_input\').show();
-                     
+
                       }
                       else {
 	                     jQuery(\'input:radio[name=ccinfo]\').removeAttr("disabled");
-                         jQuery(\'input:radio[name=ccinfo]\')[0].checked = true;   
+                         jQuery(\'input:radio[name=ccinfo]\')[0].checked = true;
                          jQuery(\'input:radio[name=ccinfo]\').val(\'useexisting\');
                          form$.get(0).submit();
                       }
-                     
+
                      });
-                    
+
                 }
             }
 
             jQuery(document).ready(function() {';
 
 if ($applePay == "on") {
-	$script .= '        
+	$script .= '
        Stripe.applePay.checkAvailability(function(available) {
   if (available) {
     document.getElementById(\'apple-pay-button\').style.display = \'block\';
@@ -374,7 +374,7 @@ if ($applePay == "on") {
 });
 
 
-$("#apple-pay-button").click(function(e) { 
+$("#apple-pay-button").click(function(e) {
   e.preventDefault();
   beginApplePay();
 });
@@ -397,7 +397,7 @@ var session = Stripe.applePay.buildSession(paymentRequest,
       var token = result.token.id;
       form$.append("<input type=\'hidden\' name=\'stripeToken\' value=\'" + token + "\' />");
       form$.append("<input type=\'hidden\' name=\'cccvv2\' value=\'123\'/>");
-      form$.append("<input type=\'hidden\' name=\'card_country\' value=\'" + result.token.card.country +"\' />");     
+      form$.append("<input type=\'hidden\' name=\'card_country\' value=\'" + result.token.card.country +"\' />");
       jQuery.post("modules/gateways/stripe-php/stripesave.php", jQuery("#payment-form").serialize(), function(data) {
            if (data == "error") {
                jQuery(\'.submit-button\').removeAttr("disabled");
@@ -408,11 +408,11 @@ var session = Stripe.applePay.buildSession(paymentRequest,
             }
             else {
 	          jQuery(\'input:radio[name=ccinfo]\').removeAttr("disabled");
-              jQuery(\'input:radio[name=ccinfo]\')[0].checked = true;   
+              jQuery(\'input:radio[name=ccinfo]\')[0].checked = true;
               jQuery(\'input:radio[name=ccinfo]\').val(\'useexisting\');
               form$.get(0).submit();
             }
-                    
+
          });
 
   }, function(error) {
@@ -423,27 +423,27 @@ var session = Stripe.applePay.buildSession(paymentRequest,
      jQuery(\'#cc_input\').show();
   });
 
-  session.begin();     
-  } 
-  
+  session.begin();
+  }
+
   ';
  }
- 
+
  $script .= '
-       
+
                 jQuery("#payment-form").submit(function(event) {
                     jQuery(".submit-button").attr("value",$wait_button);
-                    
+
                     if (jQuery("input[name=ccinfo]:checked").val() == "new") {
                       // disable the submit button to prevent repeated clicks
                       jQuery(".submit-button").attr("disabled", "disabled");
                       jQuery("#cc_input").hide();
-                      
+
                       var $state = jQuery("#stateselect option:selected").val();
                       if ($state == null) {
 	                    $state = jQuery("#inputState").val();
 	                  }
-                     
+
                       // createToken returns immediately - the supplied callback submits the form if there are no errors
                       Stripe.createToken({
                         number: jQuery(".card-number").val(),
@@ -458,8 +458,8 @@ var session = Stripe.applePay.buildSession(paymentRequest,
                         address_zip:  jQuery("#inputPostcode").val(),
                         address_country: jQuery("#country").val(),
                       }, stripeResponseHandler);
-                      
-                      
+
+
                       return false; // submit from callback
                     }
                     else {
@@ -469,27 +469,27 @@ var session = Stripe.applePay.buildSession(paymentRequest,
                 });
             });
         </script>';
-        
+
         return $script;
      }
      elseif ($vars["clientareaaction"] == 'creditcard') {
-       
-   
+
+
        if ($vars["clientsdetails"]["billingcid"] != 0) {
 	      $billing_contact = \WHMCS\User\Client\Contact::find($vars["clientsdetails"]["billingcid"])->toArray();
-       } 	  
+       }
        else {
          $billing_contact = $vars["clientsdetails"];
        }
        $script = '
-        <script type="text/javascript" src="https://js.stripe.com/v2/"></script>
+        <script type="text/javascript" src="https://js.bongloy.com/assets/v2/bongloy.js"></script>
         <script type="text/javascript">
             // this identifies your website in the createToken call below
             Stripe.setPublishableKey(\''.$publishableKey .'\');
             var $continue_button = \''. $whmcs->get_lang('clientareasavechanges'). '\';
             var $wait_button = \''. $whmcs->get_lang('pleasewait'). '\';
-            
-            
+
+
               function stripeResponseHandler(status, response) {
                 if (response.error) {
                     // re-enable the submit button
@@ -506,19 +506,19 @@ var session = Stripe.applePay.buildSession(paymentRequest,
                     // insert the token into the form so it gets submitted to the server
                     form$.append("<input type=\'hidden\' name=\'stripeToken\' value=\'" + token + "\' />");
                     form$.append("<input type=\'hidden\' name=\'cccvv2\' value=\'123\'/>");
-                    form$.get(0).submit();                    
+                    form$.get(0).submit();
                 }
             }
 
             jQuery(document).ready(function() {
                 jQuery("#payment-form").submit(function(event) {
                     jQuery(".submit-button").attr("value",$wait_button);
-                    
-                    
+
+
                       // disable the submit button to prevent repeated clicks
                       jQuery(".submit-button").attr("disabled", "disabled");
                       jQuery("#cc_input").hide();
-                     
+
                       // createToken returns immediately - the supplied callback submits the form if there are no errors
                       Stripe.createToken({
                         number: jQuery(".card-number2").val(),
@@ -533,17 +533,17 @@ var session = Stripe.applePay.buildSession(paymentRequest,
                         address_zip:  "'. $billing_contact["postcode"] . '",
                         address_country: "'. $billing_contact["country"] . '",
                       }, stripeResponseHandler);
-                      
-                      
+
+
                       return false; // submit from callback
-                    
+
                 });
             });
         </script>';
-        
+
         return $script;
      }
-   
+
 }
 
 function stripe_update_customer_with_no_invoice($vars) {
