@@ -1,3 +1,7 @@
+* Deprecation Notice *
+
+This library is deprecated and is here for reference only. Please us the  WHMCS Official Stripe module and update the API endpoint from `api.stripe.com` to `api.bongloy.com`. More info can be found here: https://docs.whmcs.com/Stripe
+
 * REQUIREMENTS *
 
 - This module requires the mbstring, json, and curl PHP extension and WHMCS 6.x. If these libraries are missing it will cause a 500 error or a blank screen.
@@ -13,12 +17,12 @@ The Stripe gateway module requires the use of modified templates that are provid
 * Copy creditcard.tpl, clientareacreditcard.tpl to your WHMCS's template directory from the templates/five or templates/six directory depending on which theme you are using. If you made any custom changes to these templates files you will need to make these changes again inside of the new template file. These templates are based off of the five and six templates that come with WHMCS Version 6.x.
 
 * If you use the boxes, cart, comparison, modern, slider, or verticalsteps order form:
-   - Replace the viewcart.tpl file with the one provided in the orderforms folder. 
+   - Replace the viewcart.tpl file with the one provided in the orderforms folder.
 
 * If you are using the standard_cart, pure_comparison, premium_comparison or cloud_slider order form:
   - For all of the above order forms, replace the orderforms/standard_cart/checkout.tpl with the orderforms/standard_cart/checkout.tpl provided.
 
-Please note this module only supports the carts that come with WHMCS, if you are using a custom cart this module requires modifications to the hook file and to the viewcart.tpl in order to function properly. We do a offer custom cart integration service for $50 USD. Please contact support@serverping.net for more information.  
+Please note this module only supports the carts that come with WHMCS, if you are using a custom cart this module requires modifications to the hook file and to the viewcart.tpl in order to function properly. We do a offer custom cart integration service for $50 USD. Please contact support@serverping.net for more information.
 
 * Copy the orderforms/ccforms directory to your WHMCS's orderforms directory.
 
@@ -40,4 +44,3 @@ To purchase commercial support, login to our client area using the following lin
 https://www.serverping.net/clients/cart.php?gid=addons
 
 * Please consider supporting this module by making a donation towards the development costs at https://www.serverping.net/clients/index.php?m=donate
-
